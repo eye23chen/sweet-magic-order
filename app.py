@@ -51,6 +51,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
         msg['From'] = f'甘甜魔法 Sweet Magic <{GMAIL_USER}>'
         msg['To'] = to_email
 
+        bank_html = "<div style='background:#e8f5e9;border-radius:12px;padding:20px;margin-bottom:24px;'><h3 style='color:#2e7d32;margin:0 0 12px;'>🏦 匯款資訊</h3><p style='color:#555;font-size:.9rem;line-height:2;margin:0;'>銀行：新光商業銀行（代碼 103）北嘉義分行<br>帳號：0666-10-100559-5<br>戶名：飲鼎國際有限公司<br><strong style='color:#2e7d32;'>匯款後請加入 LINE @607eldnj 並傳送匯款截圖</strong></p></div>" if payment == "銀行匯款" else ""
         html = f'''
         <div style="font-family:'Noto Sans TC',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);">
           <div style="background:linear-gradient(135deg,#ff8c00,#ffa500);padding:32px;text-align:center;">
@@ -72,7 +73,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
               </table>
             </div>
 
-            {"<div style='background:#e8f5e9;border-radius:12px;padding:20px;margin-bottom:24px;'><h3 style='color:#2e7d32;margin:0 0 12px;'>🏦 匯款資訊</h3><p style='color:#555;font-size:.9rem;line-height:2;margin:0;'>銀行：新光商業銀行（代碼 103）北嘉義分行<br>帳號：0666-10-100559-5<br>戶名：飲鼎國際有限公司<br><strong style=\"color:#2e7d32;\">匯款後請加入 LINE @607eldnj 並傳送匯款截圖</strong></p></div>" if payment == "銀行匯款" else ""}
+            {bank_html}
 
             <p style="color:#555;line-height:1.8;">如有任何問題，歡迎透過以下方式聯繫我們：</p>
             <div style="margin-top:12px;font-size:.9rem;color:#555;line-height:2;">
