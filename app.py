@@ -4,6 +4,7 @@ load_dotenv()
 import sqlite3
 import os
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -122,7 +123,7 @@ def order():
     conn.commit()
     conn.close()
 
-    send_confirm_email(email, name, quantity, total, payment, address)
+    threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address), daemon=True).start()
 
     return jsonify({'success': True})
 
