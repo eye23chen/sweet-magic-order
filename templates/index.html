@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>甘甜魔法 — 讓水果變得更有趣、更好吃</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans TC','Segoe UI',sans-serif; color:#333; background:#fff; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #ff8c00, #ffa500, #ffd700);
+    padding: 60px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content:''; position:absolute; inset:0;
+    background: url('/static/images/569956_0.jpg') center/cover no-repeat;
+    opacity: 0.12;
+  }
+  .hero-content { position:relative; z-index:1; max-width:800px; margin:0 auto; }
+  .hero h1 { font-size:2.8rem; color:#fff; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,.3); margin-bottom:10px; }
+  .hero p { font-size:1.2rem; color:#fff3e0; margin-bottom:20px; text-shadow:0 1px 4px rgba(0,0,0,.2); }
+  .hero-badge {
+    display:inline-block; background:#fff; color:#ff8c00;
+    font-weight:800; font-size:1rem; padding:8px 24px;
+    border-radius:50px; margin-bottom:30px; box-shadow:0 4px 12px rgba(0,0,0,.15);
+  }
+  .hero-product { max-width:320px; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); margin:0 auto 30px; display:block; width:100%; }
+  .btn-order {
+    display:inline-block; background:#fff; color:#ff8c00;
+    font-size:1.2rem; font-weight:800; padding:16px 48px;
+    border-radius:50px; text-decoration:none;
+    box-shadow:0 6px 20px rgba(0,0,0,.2); transition:transform .2s;
+  }
+  .btn-order:hover { transform:translateY(-3px); }
+
+  /* 區塊共用 */
+  section { padding:60px 20px; }
+  .container { max-width:900px; margin:0 auto; }
+  .section-title {
+    text-align:center; font-size:1.8rem; font-weight:800;
+    color:#e07000; margin-bottom:40px; position:relative;
+  }
+  .section-title::after {
+    content:''; display:block; width:60px; height:4px;
+    background:#ffa500; margin:12px auto 0; border-radius:2px;
+  }
+
+  /* 產品介紹 */
+  .intro { background:#fff8f0; }
+  .intro-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:24px; }
+  .intro-card {
+    background:#fff; border-radius:16px; padding:28px 20px;
+    text-align:center; box-shadow:0 2px 12px rgba(255,140,0,.1);
+    border-top:4px solid #ffa500;
+  }
+  .intro-card .icon { font-size:2.5rem; margin-bottom:12px; }
+  .intro-card h3 { font-size:1.1rem; font-weight:700; color:#e07000; margin-bottom:8px; }
+  .intro-card p { font-size:.9rem; color:#666; line-height:1.6; }
+
+  /* 行銷圖片 */
+  .gallery { background:#fff; }
+  .gallery-grid {
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
+  }
+  .gallery-grid img {
+    width:100%; height:100%; object-fit:cover;
+    border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,.1);
+    transition:transform .2s; display:block;
+  }
+  .gallery-grid img:hover { transform:scale(1.02); }
+
+  /* 使用方式 */
+  .how-to { background:#fff8f0; }
+  .steps { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .step { text-align:center; flex:1; min-width:180px; max-width:220px; }
+  .step-num {
+    width:60px; height:60px; background:linear-gradient(135deg,#ff8c00,#ffd700);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; font-weight:900; color:#fff; margin:0 auto 16px;
+    box-shadow:0 4px 12px rgba(255,140,0,.3);
+  }
+  .step h3 { font-size:1rem; font-weight:700; color:#e07000; margin-bottom:8px; }
+  .step p { font-size:.9rem; color:#666; line-height:1.6; }
+  .step-arrow { font-size:2rem; color:#ffa500; display:flex; align-items:center; padding-top:20px; }
+
+  /* 規格 */
+  .spec { background:#fff; }
+  .spec-box {
+    background:linear-gradient(135deg,#fff8f0,#fff3e0);
+    border:2px solid #ffa500; border-radius:20px;
+    padding:40px; text-align:center; max-width:500px; margin:0 auto;
+    box-shadow:0 4px 20px rgba(255,140,0,.15);
+  }
+  .spec-box h3 { font-size:1.4rem; font-weight:800; color:#e07000; margin-bottom:20px; }
+  .spec-price { font-size:3rem; font-weight:900; color:#ff8c00; margin-bottom:8px; }
+  .spec-price span { font-size:1.2rem; }
+  .spec-note { font-size:.85rem; color:#999; margin-bottom:20px; }
+  .spec-detail { font-size:1rem; color:#555; line-height:2; }
+  .spec-detail strong { color:#e07000; }
+
+  /* 付款方式 */
+  .payment { background:#fff8f0; }
+  .payment-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; max-width:700px; margin:0 auto; }
+  .payment-card {
+    background:#fff; border-radius:16px; padding:28px 24px;
+    box-shadow:0 2px 12px rgba(255,140,0,.1); border:2px solid #ffe0b2;
+  }
+  .payment-card h3 { font-size:1.1rem; font-weight:800; color:#e07000; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .payment-card p { font-size:.9rem; color:#555; line-height:1.8; }
+  .payment-card .bank-info {
+    background:#fff8f0; border-radius:10px; padding:14px;
+    margin-top:12px; font-size:.9rem; line-height:2; color:#444;
+  }
+  .payment-card .bank-info strong { color:#e07000; }
+  .line-qr { text-align:center; margin-top:16px; }
+  .line-qr img { width:140px; height:140px; border-radius:12px; }
+  .line-qr p { font-size:.85rem; color:#666; margin-top:8px; }
+  .line-btn {
+    display:inline-block; background:#06c755; color:#fff;
+    font-weight:700; padding:10px 24px; border-radius:50px;
+    text-decoration:none; font-size:.95rem; margin-top:12px;
+  }
+
+  /* 下單表單 */
+  .order { background:linear-gradient(135deg,#ff8c00,#ffa500); }
+  .order .section-title { color:#fff; }
+  .order .section-title::after { background:#fff; }
+  .order-form {
+    background:#fff; border-radius:20px; padding:40px;
+    max-width:560px; margin:0 auto;
+    box-shadow:0 8px 32px rgba(0,0,0,.15);
+  }
+  .form-group { margin-bottom:20px; }
+  .form-group label { display:block; font-weight:700; color:#e07000; margin-bottom:6px; font-size:.95rem; }
+  .form-group input, .form-group select {
+    width:100%; padding:12px 16px; border:2px solid #ffe0b2;
+    border-radius:10px; font-size:1rem; transition:border .2s;
+    font-family:inherit;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline:none; border-color:#ffa500;
+  }
+  .payment-select { display:flex; gap:12px; margin-bottom:20px; }
+  .payment-opt {
+    flex:1; border:2px solid #ffe0b2; border-radius:10px;
+    padding:12px; text-align:center; cursor:pointer; transition:all .2s;
+    font-size:.9rem; font-weight:600; color:#888;
+  }
+  .payment-opt.active { border-color:#ffa500; background:#fff8f0; color:#e07000; }
+  .payment-opt input[type=radio] { display:none; }
+  .form-total {
+    background:#fff8f0; border-radius:10px; padding:16px;
+    text-align:center; margin-bottom:20px;
+    font-size:1.1rem; color:#555;
+  }
+  .form-total strong { font-size:1.6rem; color:#ff8c00; font-weight:900; }
+  .btn-submit {
+    width:100%; padding:16px; background:linear-gradient(135deg,#ff8c00,#ffd700);
+    color:#fff; font-size:1.2rem; font-weight:800; border:none;
+    border-radius:50px; cursor:pointer; transition:transform .2s;
+    box-shadow:0 4px 16px rgba(255,140,0,.4);
+  }
+  .btn-submit:hover { transform:translateY(-2px); }
+  .form-notice { font-size:.8rem; color:#999; text-align:center; margin-top:12px; line-height:1.6; }
+  .success-msg {
+    display:none; background:#e8f5e9; border:2px solid #4caf50;
+    border-radius:12px; padding:20px; text-align:center;
+    color:#2e7d32; font-weight:700; margin-bottom:20px; line-height:1.8;
+  }
+
+  /* 公司資訊 */
+  .company { background:#fff; }
+  .company-box {
+    max-width:600px; margin:0 auto; text-align:center;
+    border:2px solid #ffe0b2; border-radius:20px; padding:36px;
+    background:#fff8f0;
+  }
+  .company-box h3 { font-size:1.3rem; font-weight:800; color:#e07000; margin-bottom:20px; }
+  .company-box p { font-size:.95rem; color:#555; line-height:2.2; }
+  .company-box .badge-row { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:16px; }
+  .badge {
+    background:#fff; border:1px solid #ffa500; color:#e07000;
+    border-radius:50px; padding:6px 16px; font-size:.85rem; font-weight:700;
+  }
+
+  /* Footer */
+  footer { background:#2d2d2d; color:#aaa; text-align:center; padding:28px 20px; font-size:.85rem; line-height:2; }
+  footer a { color:#ffa500; text-decoration:none; }
+
+  @media(max-width:600px){
+    .hero h1 { font-size:2rem; }
+    .step-arrow { display:none; }
+    .order-form { padding:24px; }
+    .gallery-grid { grid-template-columns:1fr; }
+    .payment-select { flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <p>神秘果粉 + 甘草鹽粉，沾一點魔法，讓美味瞬間升級</p>
+    <img class="hero-product" src="/static/images/569956_0.jpg" alt="甘甜魔法產品">
+    <br>
+    <a href="#order" class="btn-order">🛒 立即訂購 NT$700</a>
+  </div>
+</section>
+
+<!-- 產品介紹 -->
+<section class="intro">
+  <div class="container">
+    <h2 class="section-title">甘甜魔法是什麼？</h2>
+    <div class="intro-grid">
+      <div class="intro-card">
+        <div class="icon">🍃</div>
+        <h3>有機神秘果粉</h3>
+        <p>影響味覺感受，降低酸味、提升甜味，讓水果風味全面升級</p>
+      </div>
+      <div class="intro-card">
+        <div class="icon">🌿</div>
+        <h3>食品級甘草粉</h3>
+        <p>天然甘草萃取，長期甜度穩定，滋潤口腔保護</p>
+      </div>
+      <div class="intro-card">
+        <div class="icon">🍎</div>
+        <h3>水果沾粉產品</h3>
+        <p>不是飲品、不是保健品，就是讓水果變得更有趣、更好吃的魔法粉</p>
+      </div>
+      <div class="intro-card">
+        <div class="icon">✅</div>
+        <h3>低糖低熱量</h3>
+        <p>全天然農產、低糖、低熱量、低負擔，甜，可以不用有罪惡感</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 行銷圖片 -->
+<section class="gallery">
+  <div class="container">
+    <h2 class="section-title">各種族群都適合</h2>
+    <div class="gallery-grid">
+      <img src="/static/images/1.jpg" alt="怕酸？水果瞬間變驚喜">
+      <img src="/static/images/3.jpg" alt="想吃甜又怕胖">
+      <img src="/static/images/5.jpg" alt="小孩挑食厭食">
+      <img src="/static/images/2.jpg" alt="化療病後味覺苦澀">
+    </div>
+  </div>
+</section>
+
+<!-- 使用方式 -->
+<section class="how-to">
+  <div class="container">
+    <h2 class="section-title">怎麼使用？超簡單！</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>切水果</h3>
+        <p>將水果切塊或切片，番茄、芭樂、檸檬、草莓都適合</p>
+      </div>
+      <div class="step-arrow">▶</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>沾魔法粉</h3>
+        <p>沾取適量甘甜魔法粉末，不需要泡水，不需要沖泡</p>
+      </div>
+      <div class="step-arrow">▶</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>感受驚喜</h3>
+        <p>直接食用，瞬間感受酸味轉甜的神奇體驗！</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 產品規格 -->
+<section class="spec">
+  <div class="container">
+    <h2 class="section-title">產品規格</h2>
+    <div class="spec-box">
+      <h3>🎁 甘甜魔法｜神秘果粉 + 甘草鹽粉</h3>
+      <div class="spec-price"><span>NT$</span>700</div>
+      <div class="spec-note">含運費（偏遠離島地區除外）</div>
+      <div class="spec-detail">
+        <strong>內容：</strong>1盒 20小包裝入<br>
+        <strong>成分：</strong>有機神秘果粉 + 食品級甘草粉<br>
+        <strong>適合：</strong>全家大小、親子互動、聚會體驗<br>
+        <strong>運送：</strong>下單後 2～5 個工作天出貨
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 付款方式 -->
+<section class="payment">
+  <div class="container">
+    <h2 class="section-title">付款方式</h2>
+    <div class="payment-grid">
+      <div class="payment-card">
+        <h3>💳 線上刷卡／ATM</h3>
+        <p>透過綠界金流安全付款，支援信用卡、ATM 轉帳、超商代碼繳費。</p>
+        <p style="margin-top:10px;font-size:.85rem;color:#aaa;">（下單後於付款頁面完成）</p>
+      </div>
+      <div class="payment-card">
+        <h3>🏦 銀行匯款</h3>
+        <div class="bank-info">
+          <strong>銀行：</strong>新光商業銀行（代碼 103）<br>
+          <strong>分行：</strong>北嘉義分行<br>
+          <strong>帳號：</strong>0666-10-100559-5<br>
+          <strong>戶名：</strong>飲鼎國際有限公司
+        </div>
+        <div class="line-qr">
+          <img src="/static/images/LINE_NOTE_260613_1.jpg" alt="LINE QR Code">
+          <p>匯款後請掃描加入 LINE 官方帳號<br>並傳送匯款截圖確認付款</p>
+          <a href="https://line.me/R/ti/p/@607eldnj" target="_blank" class="line-btn">➕ 加入 LINE @607eldnj</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 下單表單 -->
+<section class="order" id="order">
+  <div class="container">
+    <h2 class="section-title">立即訂購</h2>
+    <div class="order-form">
+      <div class="success-msg" id="successMsg">
+        ✅ 訂單已送出！<br>
+        確認信已寄送至您的 Email，請記得查收。<br>
+        我們將盡快與您聯繫確認付款及出貨，謝謝！
+      </div>
+      <form id="orderForm" onsubmit="submitOrder(event)">
+        <div class="form-group">
+          <label>姓名 *</label>
+          <input type="text" name="name" placeholder="請輸入您的姓名" required>
+        </div>
+        <div class="form-group">
+          <label>手機號碼 *</label>
+          <input type="tel" name="phone" placeholder="09XX-XXX-XXX" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" name="email" placeholder="請輸入 Email（訂單確認信將寄送至此）" required>
+        </div>
+        <div class="form-group">
+          <label>收件地址 *</label>
+          <input type="text" name="address" placeholder="請輸入完整收件地址（含縣市、鄉鎮、街道）" required>
+        </div>
+        <div class="form-group">
+          <label>訂購數量 *</label>
+          <select name="quantity" onchange="updateTotal(this)">
+            <option value="1">1 盒 — NT$700</option>
+            <option value="2">2 盒 — NT$1,400</option>
+            <option value="3">3 盒 — NT$2,100</option>
+            <option value="4">4 盒 — NT$2,800</option>
+            <option value="5">5 盒 — NT$3,500</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>付款方式 *</label>
+          <div class="payment-select">
+            <label class="payment-opt active" onclick="selectPayment(this,'credit')">
+              <input type="radio" name="payment" value="線上金流（綠界）" checked>
+              💳 線上刷卡／ATM
+            </label>
+            <label class="payment-opt" onclick="selectPayment(this,'bank')">
+              <input type="radio" name="payment" value="銀行匯款">
+              🏦 銀行匯款
+            </label>
+          </div>
+        </div>
+        <div class="form-total">
+          訂單金額：<strong id="totalPrice">NT$700</strong>
+        </div>
+        <button type="submit" class="btn-submit">🛒 確認訂購</button>
+        <p class="form-notice">
+          ＊送出訂單後，確認信將自動寄送至您的 Email<br>
+          ＊偏遠離島地區運費另計，將於確認聯繫時說明<br>
+          ＊如有疑問請加入 LINE 官方帳號 @607eldnj
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- 公司資訊 -->
+<section class="company">
+  <div class="container">
+    <h2 class="section-title">關於我們</h2>
+    <div class="company-box">
+      <h3>飲鼎國際有限公司</h3>
+      <p>
+        📍 嘉義市西區大同路783號1樓<br>
+        📧 yinding90141369@gmail.com<br>
+        💬 LINE 官方帳號：@607eldnj<br>
+        🏢 統一編號：90141369
+      </p>
+      <div class="badge-row">
+        <span class="badge">✅ 合法登記公司</span>
+        <span class="badge">🌿 天然成分</span>
+        <span class="badge">🔒 安全付款</span>
+        <span class="badge">🚚 全台配送</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 飲鼎國際有限公司｜統編 90141369</p>
+  <p>甘甜魔法 Sweet Magic Miracle Fruit Licorice Salt Powder</p>
+  <p>嘉義市西區大同路783號1樓｜<a href="mailto:yinding90141369@gmail.com">yinding90141369@gmail.com</a></p>
+</footer>
+
+<script>
+function updateTotal(sel) {
+  const qty = parseInt(sel.value);
+  document.getElementById('totalPrice').textContent = 'NT$' + (qty * 700).toLocaleString();
+}
+
+function selectPayment(el, type) {
+  document.querySelectorAll('.payment-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  el.querySelector('input[type=radio]').checked = true;
+}
+
+function submitOrder(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    name: form.name.value,
+    phone: form.phone.value,
+    email: form.email.value,
+    address: form.address.value,
+    quantity: form.quantity.value,
+    payment: form.payment.value
+  };
+  const btn = form.querySelector('.btn-submit');
+  btn.textContent = '送出中...';
+  btn.disabled = true;
+
+  fetch('/order', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      document.getElementById('successMsg').style.display = 'block';
+      form.style.display = 'none';
+      window.scrollTo({top: document.getElementById('order').offsetTop - 20, behavior:'smooth'});
+    } else {
+      alert(res.message || '送出失敗，請稍後再試');
+      btn.textContent = '🛒 確認訂購';
+      btn.disabled = false;
+    }
+  })
+  .catch(() => {
+    alert('送出失敗，請稍後再試');
+    btn.textContent = '🛒 確認訂購';
+    btn.disabled = false;
+  });
+}
+</script>
+</body>
+</html>
