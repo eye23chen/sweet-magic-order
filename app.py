@@ -96,6 +96,17 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
         print(f'Email 寄送失敗: {e}')
 
 
+API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
+
+@app.route('/api/orders')
+def api_orders():
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM orders ORDER BY id DESC').fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
 @app.route('/')
 def index():
     return render_template('index.html')
