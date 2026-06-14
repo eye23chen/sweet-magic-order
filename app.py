@@ -110,7 +110,8 @@ def order():
     address  = data.get('address', '').strip()
     quantity = int(data.get('quantity', 1))
     payment  = data.get('payment', '線上金流（綠界）').strip()
-    total    = quantity * 700
+    shipping = 0 if quantity >= 2 else 80
+    total    = quantity * 700 + shipping
 
     if not all([name, phone, email, address]):
         return jsonify({'success': False, 'message': '請填寫所有必填欄位'})

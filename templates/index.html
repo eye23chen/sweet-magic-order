@@ -211,7 +211,7 @@
     <p>神秘果粉 + 甘草鹽粉，沾一點魔法，讓美味瞬間升級</p>
     <img class="hero-product" src="/static/images/569956_0.jpg" alt="甘甜魔法產品">
     <br>
-    <a href="#order" class="btn-order">🛒 立即訂購 NT$700</a>
+    <a href="#order" class="btn-order">🛒 立即訂購 NT$700/盒</a>
   </div>
 </section>
 
@@ -232,8 +232,8 @@
       </div>
       <div class="intro-card">
         <div class="icon">🍎</div>
-        <h3>水果沾粉產品</h3>
-        <p>不是飲品、不是保健品，就是讓水果變得更有趣、更好吃的魔法粉</p>
+        <h3>什麼都可以沾</h3>
+        <p>水果、蔬菜、零食都可以沾！神秘果粉＋甘草鹽粉黃金比例調配，沾一點魔法，驚喜立現</p>
       </div>
       <div class="intro-card">
         <div class="icon">✅</div>
@@ -289,12 +289,12 @@
     <h2 class="section-title">產品規格</h2>
     <div class="spec-box">
       <h3>🎁 甘甜魔法｜神秘果粉 + 甘草鹽粉</h3>
-      <div class="spec-price"><span>NT$</span>700</div>
-      <div class="spec-note">含運費（偏遠離島地區除外）</div>
+      <div class="spec-price"><span>NT$</span>700<span style="font-size:1rem"> / 盒</span></div>
+      <div class="spec-note">購買 2 盒以上免運費｜單盒運費 NT$80</div>
       <div class="spec-detail">
         <strong>內容：</strong>1盒 20小包裝入<br>
         <strong>成分：</strong>有機神秘果粉 + 食品級甘草粉<br>
-        <strong>適合：</strong>全家大小、親子互動、聚會體驗<br>
+        <strong>適合：</strong>全家大小，什麼都可以沾！<br>
         <strong>運送：</strong>下單後 2～5 個工作天出貨
       </div>
     </div>
@@ -359,11 +359,11 @@
         <div class="form-group">
           <label>訂購數量 *</label>
           <select name="quantity" onchange="updateTotal(this)">
-            <option value="1">1 盒 — NT$700</option>
-            <option value="2">2 盒 — NT$1,400</option>
-            <option value="3">3 盒 — NT$2,100</option>
-            <option value="4">4 盒 — NT$2,800</option>
-            <option value="5">5 盒 — NT$3,500</option>
+            <option value="1">1 盒 — NT$700（＋運費 NT$80）</option>
+            <option value="2">2 盒 — NT$1,400（免運）</option>
+            <option value="3">3 盒 — NT$2,100（免運）</option>
+            <option value="4">4 盒 — NT$2,800（免運）</option>
+            <option value="5">5 盒 — NT$3,500（免運）</option>
           </select>
         </div>
         <div class="form-group">
@@ -380,7 +380,7 @@
           </div>
         </div>
         <div class="form-total">
-          訂單金額：<strong id="totalPrice">NT$700</strong>
+          訂單金額：<strong id="totalPrice">NT$780 （含運費 NT$80）</strong>
         </div>
         <button type="submit" class="btn-submit">🛒 確認訂購</button>
         <p class="form-notice">
@@ -424,7 +424,10 @@
 <script>
 function updateTotal(sel) {
   const qty = parseInt(sel.value);
-  document.getElementById('totalPrice').textContent = 'NT$' + (qty * 700).toLocaleString();
+  const shipping = qty >= 2 ? 0 : 80;
+  const total = qty * 700 + shipping;
+  const note = shipping > 0 ? '（含運費 NT$80）' : '（免運）';
+  document.getElementById('totalPrice').textContent = 'NT$' + total.toLocaleString() + ' ' + note;
 }
 
 function selectPayment(el, type) {
