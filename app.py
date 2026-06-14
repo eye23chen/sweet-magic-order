@@ -5,6 +5,8 @@ import sqlite3
 import os
 import smtplib
 import threading
+import urllib.request
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -98,6 +100,24 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
 
 API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
 
+LINE_TOKEN = os.environ.get('LINE_TOKEN', '')
+LINE_USER_ID = os.environ.get('LINE_USER_ID', '')
+
+def send_line_notify(name, phone, quantity, total, payment, address):
+    if not LINE_TOKEN or not LINE_USER_ID:
+        return
+    try:
+        msg = f"🛒 新訂單通知！\n姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n地址：{address}"
+        data = json.dumps({'to': LINE_USER_ID, 'messages': [{'type': 'text', 'text': msg}]}).encode()
+        req = urllib.request.Request(
+            'https://api.line.me/v2/bot/message/push',
+            data=data,
+            headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {LINE_TOKEN}'}
+        )
+        urllib.request.urlopen(req, timeout=8)
+    except Exception as e:
+        print(f'LINE 通知失敗: {e}')
+
 @app.route('/api/orders')
 def api_orders():
     if request.headers.get('X-API-Key') != API_KEY:
@@ -136,6 +156,7 @@ def order():
     conn.close()
 
     threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address), daemon=True).start()
+    threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address), daemon=True).start()
 
     return jsonify({'success': True})
 
