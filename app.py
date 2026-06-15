@@ -3,20 +3,17 @@ from dotenv import load_dotenv
 load_dotenv()
 import sqlite3
 import os
-import smtplib
 import threading
 import urllib.request
 import json
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'orders.db')
 
-GMAIL_USER = os.environ.get('GMAIL_USER', 'yinding90141369@gmail.com')
-GMAIL_PASS = os.environ.get('GMAIL_PASS', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+FROM_EMAIL = 'onboarding@resend.dev'
 
 
 def get_db():
@@ -46,14 +43,9 @@ def init_db():
 
 
 def send_confirm_email(to_email, name, quantity, total, payment, address):
-    if not GMAIL_PASS:
+    if not RESEND_API_KEY:
         return
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = '【甘甜魔法】訂單確認通知'
-        msg['From'] = f'甘甜魔法 Sweet Magic <{GMAIL_USER}>'
-        msg['To'] = to_email
-
         bank_html = "<div style='background:#e8f5e9;border-radius:12px;padding:20px;margin-bottom:24px;'><h3 style='color:#2e7d32;margin:0 0 12px;'>🏦 匯款資訊</h3><p style='color:#555;font-size:.9rem;line-height:2;margin:0;'>銀行：新光商業銀行（代碼 103）北嘉義分行<br>帳號：0666-10-100559-5<br>戶名：飲鼎國際有限公司<br><strong style='color:#2e7d32;'>匯款後請加入 LINE @607eldnj 並傳送匯款截圖</strong></p></div>" if payment == "銀行匯款" else ""
         html = f'''
         <div style="font-family:'Noto Sans TC',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);">
@@ -90,10 +82,22 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
         </div>
         '''
 
-        msg.attach(MIMEText(html, 'html', 'utf-8'))
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(GMAIL_USER, GMAIL_PASS)
-            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        payload = json.dumps({
+            'from': f'甘甜魔法 Sweet Magic <{FROM_EMAIL}>',
+            'to': [to_email],
+            'subject': '【甘甜魔法】訂單確認通知',
+            'html': html
+        }).encode()
+
+        req = urllib.request.Request(
+            'https://api.resend.com/emails',
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {RESEND_API_KEY}'
+            }
+        )
+        urllib.request.urlopen(req, timeout=10)
     except Exception as e:
         print(f'Email 寄送失敗: {e}')
 
