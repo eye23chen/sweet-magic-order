@@ -12,8 +12,9 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'orders.db')
 
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-FROM_EMAIL = 'no-reply@yinding.tw'
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+FROM_EMAIL = 'yinding90141369@gmail.com'
+FROM_NAME = '甘甜魔法 Sweet Magic'
 
 
 def get_db():
@@ -43,7 +44,7 @@ def init_db():
 
 
 def send_confirm_email(to_email, name, quantity, total, payment, address):
-    if not RESEND_API_KEY:
+    if not BREVO_API_KEY:
         return
     try:
         bank_html = "<div style='background:#e8f5e9;border-radius:12px;padding:20px;margin-bottom:24px;'><h3 style='color:#2e7d32;margin:0 0 12px;'>🏦 匯款資訊</h3><p style='color:#555;font-size:.9rem;line-height:2;margin:0;'>銀行：新光商業銀行（代碼 103）北嘉義分行<br>帳號：0666-10-100559-5<br>戶名：飲鼎國際有限公司<br><strong style='color:#2e7d32;'>匯款後請加入 LINE @607eldnj 並傳送匯款截圖</strong></p></div>" if payment == "銀行匯款" else ""
@@ -83,18 +84,18 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
         '''
 
         payload = json.dumps({
-            'from': f'甘甜魔法 Sweet Magic <{FROM_EMAIL}>',
-            'to': [to_email],
+            'sender': {'name': FROM_NAME, 'email': FROM_EMAIL},
+            'to': [{'email': to_email}],
             'subject': '【甘甜魔法】訂單確認通知',
-            'html': html
+            'htmlContent': html
         }).encode()
 
         req = urllib.request.Request(
-            'https://api.resend.com/emails',
+            'https://api.brevo.com/v3/smtp/email',
             data=payload,
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {RESEND_API_KEY}'
+                'api-key': BREVO_API_KEY
             }
         )
         urllib.request.urlopen(req, timeout=10)
