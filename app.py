@@ -13,7 +13,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 DB_PATH = os.path.join(os.path.dirname(__file__), 'orders.db')
 
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-FROM_EMAIL = 'onboarding@resend.dev'
+FROM_EMAIL = 'no-reply@yinding.tw'
 
 
 def get_db():
