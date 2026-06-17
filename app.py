@@ -48,7 +48,7 @@ def init_db():
     conn.close()
 
 
-def send_confirm_email(to_email, name, quantity, total, payment, address, order_id=None):
+def send_confirm_email(to_email, name, quantity, total, payment, address, order_id=None, status='待處理'):
     if not BREVO_API_KEY:
         return
     try:
@@ -72,6 +72,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address, order_
                 <tr><td style="padding:6px 0;color:#888;">金額</td><td style="padding:6px 0;font-size:1.2rem;font-weight:900;color:#ff8c00;">NT${total:,}（含運）</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">收件地址</td><td style="padding:6px 0;">{address}</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">付款方式</td><td style="padding:6px 0;">{payment}</td></tr>
+                <tr><td style="padding:6px 0;color:#888;">付款狀態</td><td style="padding:6px 0;font-weight:700;color:{'#2e7d32' if status == '已付款' else '#e07000'};">{'✅ 已付款' if status == '已付款' else '⏳ 待付款'}</td></tr>
               </table>
             </div>
 
@@ -246,7 +247,7 @@ def ecpay_callback():
         cur.close()
         conn.close()
         if o:
-            threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id']), daemon=True).start()
+            threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '已付款'), daemon=True).start()
             threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], '已付款✅', o['address'], o['id']), daemon=True).start()
     return '1|OK'
 
