@@ -459,6 +459,10 @@ function submitOrder(e) {
   .then(r => r.json())
   .then(res => {
     if (res.success) {
+      if (res.ecpay) {
+        window.location.href = '/ecpay/checkout/' + res.order_id;
+        return;
+      }
       document.getElementById('successMsg').style.display = 'block';
       form.style.display = 'none';
       window.scrollTo({top: document.getElementById('order').offsetTop - 20, behavior:'smooth'});

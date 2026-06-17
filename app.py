@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -8,6 +8,9 @@ import json
 from datetime import datetime
 import psycopg2
 import psycopg2.extras
+import hashlib
+import urllib.parse
+import time
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -106,6 +109,43 @@ def send_confirm_email(to_email, name, quantity, total, payment, address, order_
         print(f'Email 寄送失敗: {e}')
 
 
+ECPAY_MERCHANT_ID = os.environ.get('ECPAY_MERCHANT_ID', '2000132')
+ECPAY_HASH_KEY    = os.environ.get('ECPAY_HASH_KEY', '5294y06JbISpM5x9')
+ECPAY_HASH_IV     = os.environ.get('ECPAY_HASH_IV', 'v77hoKGq4kWxNNIS')
+ECPAY_API_URL     = 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
+BASE_URL          = os.environ.get('BASE_URL', 'https://web-production-baae6.up.railway.app')
+
+def ecpay_check_mac(params):
+    sorted_params = sorted(params.items(), key=lambda x: x[0].lower())
+    raw = '&'.join(f'{k}={v}' for k, v in sorted_params)
+    raw = f'HashKey={ECPAY_HASH_KEY}&{raw}&HashIV={ECPAY_HASH_IV}'
+    raw = urllib.parse.quote_plus(raw).lower()
+    return hashlib.sha256(raw.encode()).hexdigest().upper()
+
+def build_ecpay_form(order_id, total, name):
+    trade_no = f'SM{order_id:08d}{int(time.time()) % 100000:05d}'
+    trade_date = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    params = {
+        'MerchantID':        ECPAY_MERCHANT_ID,
+        'MerchantTradeNo':   trade_no,
+        'MerchantTradeDate': trade_date,
+        'PaymentType':       'aio',
+        'TotalAmount':       str(total),
+        'TradeDesc':         '甘甜魔法訂單',
+        'ItemName':          f'甘甜魔法x{total//700 if total % 700 == 0 else 1}',
+        'ReturnURL':         f'{BASE_URL}/ecpay/callback',
+        'OrderResultURL':    f'{BASE_URL}/ecpay/result',
+        'CustomField1':      str(order_id),
+        'ChoosePayment':     'ALL',
+        'EncryptType':       '1',
+    }
+    params['CheckMacValue'] = ecpay_check_mac(params)
+    fields = ''.join(f'<input type="hidden" name="{k}" value="{v}">' for k, v in params.items())
+    return f'''<!DOCTYPE html><html><body>
+    <form id="ecpay" action="{ECPAY_API_URL}" method="POST">{fields}</form>
+    <script>document.getElementById("ecpay").submit();</script>
+    </body></html>'''
+
 API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
 
 LINE_TOKEN = os.environ.get('LINE_TOKEN', '')
@@ -170,10 +210,54 @@ def order():
     cur.close()
     conn.close()
 
+    if payment == '線上金流（綠界）':
+        return jsonify({'success': True, 'order_id': order_id, 'ecpay': True})
+
     threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id), daemon=True).start()
     threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address, order_id), daemon=True).start()
 
     return jsonify({'success': True, 'order_id': order_id})
+
+
+@app.route('/ecpay/checkout/<int:order_id>')
+def ecpay_checkout(order_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM orders WHERE id=%s', (order_id,))
+    o = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not o:
+        return '訂單不存在', 404
+    return build_ecpay_form(o['id'], o['total'], o['name'])
+
+
+@app.route('/ecpay/callback', methods=['POST'])
+def ecpay_callback():
+    data = request.form.to_dict()
+    rtn_code = data.get('RtnCode', '')
+    order_id = data.get('CustomField1', '')
+    if rtn_code == '1' and order_id:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("UPDATE orders SET status='已付款' WHERE id=%s RETURNING *", (int(order_id),))
+        o = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        if o:
+            threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id']), daemon=True).start()
+            threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], '已付款✅', o['address'], o['id']), daemon=True).start()
+    return '1|OK'
+
+
+@app.route('/ecpay/result')
+def ecpay_result():
+    rtn_code = request.args.get('RtnCode', '')
+    order_id = request.args.get('CustomField1', '')
+    if rtn_code == '1':
+        return redirect(f'/?paid=1&order={order_id}')
+    return redirect(f'/?paid=0&order={order_id}')
 
 
 init_db()
