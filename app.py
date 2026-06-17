@@ -152,12 +152,13 @@ API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
 LINE_TOKEN = os.environ.get('LINE_TOKEN', '')
 LINE_USER_ID = os.environ.get('LINE_USER_ID', '')
 
-def send_line_notify(name, phone, quantity, total, payment, address, order_id=None):
+def send_line_notify(name, phone, quantity, total, payment, address, order_id=None, status=None):
     if not LINE_TOKEN or not LINE_USER_ID:
         return
     try:
         order_str = f"訂單編號：#{order_id}\n" if order_id else ""
-        msg = f"🛒 新訂單通知！\n{order_str}姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n地址：{address}"
+        status_str = f"付款狀態：{status}\n" if status else ""
+        msg = f"🛒 新訂單通知！\n{order_str}姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n{status_str}地址：{address}"
         data = json.dumps({'to': LINE_USER_ID, 'messages': [{'type': 'text', 'text': msg}]}).encode()
         req = urllib.request.Request(
             'https://api.line.me/v2/bot/message/push',
@@ -248,7 +249,7 @@ def ecpay_callback():
         conn.close()
         if o:
             threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '已付款'), daemon=True).start()
-            threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], '已付款✅', o['address'], o['id']), daemon=True).start()
+            threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '✅ 已付款'), daemon=True).start()
     return '1|OK'
 
 
