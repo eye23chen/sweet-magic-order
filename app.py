@@ -43,7 +43,7 @@ def init_db():
     conn.close()
 
 
-def send_confirm_email(to_email, name, quantity, total, payment, address):
+def send_confirm_email(to_email, name, quantity, total, payment, address, order_id=None):
     if not BREVO_API_KEY:
         return
     try:
@@ -61,6 +61,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address):
             <div style="background:#fff8f0;border-radius:12px;padding:20px;margin:24px 0;border-left:4px solid #ffa500;">
               <h3 style="color:#e07000;margin:0 0 12px;">📋 訂單明細</h3>
               <table style="width:100%;font-size:.95rem;color:#555;border-collapse:collapse;">
+                <tr><td style="padding:6px 0;color:#888;">訂單編號</td><td style="padding:6px 0;font-weight:700;color:#333;">#{order_id}</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">商品</td><td style="padding:6px 0;font-weight:700;color:#333;">甘甜魔法（1盒20小包裝入）</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">數量</td><td style="padding:6px 0;">{quantity} 盒</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">金額</td><td style="padding:6px 0;font-size:1.2rem;font-weight:900;color:#ff8c00;">NT${total:,}（含運）</td></tr>
@@ -153,17 +154,18 @@ def order():
         return jsonify({'success': False, 'message': '請填寫所有必填欄位'})
 
     conn = get_db()
-    conn.execute(
+    cursor = conn.execute(
         'INSERT INTO orders (created_at,name,phone,email,address,quantity,total,payment) VALUES (?,?,?,?,?,?,?,?)',
         (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, phone, email, address, quantity, total, payment)
     )
+    order_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
-    threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address), daemon=True).start()
+    threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id), daemon=True).start()
     threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address), daemon=True).start()
 
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'order_id': order_id})
 
 
 init_db()
