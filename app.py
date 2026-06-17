@@ -109,11 +109,12 @@ API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
 LINE_TOKEN = os.environ.get('LINE_TOKEN', '')
 LINE_USER_ID = os.environ.get('LINE_USER_ID', '')
 
-def send_line_notify(name, phone, quantity, total, payment, address):
+def send_line_notify(name, phone, quantity, total, payment, address, order_id=None):
     if not LINE_TOKEN or not LINE_USER_ID:
         return
     try:
-        msg = f"🛒 新訂單通知！\n姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n地址：{address}"
+        order_str = f"訂單編號：#{order_id}\n" if order_id else ""
+        msg = f"🛒 新訂單通知！\n{order_str}姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n地址：{address}"
         data = json.dumps({'to': LINE_USER_ID, 'messages': [{'type': 'text', 'text': msg}]}).encode()
         req = urllib.request.Request(
             'https://api.line.me/v2/bot/message/push',
@@ -163,7 +164,7 @@ def order():
     conn.close()
 
     threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id), daemon=True).start()
-    threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address), daemon=True).start()
+    threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address, order_id), daemon=True).start()
 
     return jsonify({'success': True, 'order_id': order_id})
 
