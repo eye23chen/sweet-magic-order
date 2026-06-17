@@ -1,16 +1,17 @@
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 load_dotenv()
-import sqlite3
 import os
 import threading
 import urllib.request
 import json
 from datetime import datetime
+import psycopg2
+import psycopg2.extras
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'orders.db')
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
 FROM_EMAIL = 'yinding90141369@gmail.com'
@@ -18,16 +19,16 @@ FROM_NAME = '甘甜魔法 Sweet Magic'
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 
 def init_db():
     conn = get_db()
-    conn.execute('''
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             created_at TEXT NOT NULL,
             name TEXT NOT NULL,
             phone TEXT NOT NULL,
@@ -40,6 +41,7 @@ def init_db():
         )
     ''')
     conn.commit()
+    cur.close()
     conn.close()
 
 
@@ -130,7 +132,10 @@ def api_orders():
     if request.headers.get('X-API-Key') != API_KEY:
         return jsonify({'error': 'unauthorized'}), 401
     conn = get_db()
-    rows = conn.execute('SELECT * FROM orders ORDER BY id DESC').fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM orders ORDER BY id DESC')
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     return jsonify([dict(r) for r in rows])
 
@@ -155,12 +160,14 @@ def order():
         return jsonify({'success': False, 'message': '請填寫所有必填欄位'})
 
     conn = get_db()
-    cursor = conn.execute(
-        'INSERT INTO orders (created_at,name,phone,email,address,quantity,total,payment) VALUES (?,?,?,?,?,?,?,?)',
+    cur = conn.cursor()
+    cur.execute(
+        'INSERT INTO orders (created_at,name,phone,email,address,quantity,total,payment) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id',
         (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, phone, email, address, quantity, total, payment)
     )
-    order_id = cursor.lastrowid
+    order_id = cur.fetchone()[0]
     conn.commit()
+    cur.close()
     conn.close()
 
     threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id), daemon=True).start()
