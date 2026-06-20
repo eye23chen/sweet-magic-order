@@ -253,10 +253,11 @@ def ecpay_callback():
     return '1|OK'
 
 
-@app.route('/ecpay/result')
+@app.route('/ecpay/result', methods=['GET', 'POST'])
 def ecpay_result():
-    rtn_code = request.args.get('RtnCode', '')
-    order_id = request.args.get('CustomField1', '')
+    data = request.form if request.method == 'POST' else request.args
+    rtn_code = data.get('RtnCode', '')
+    order_id = data.get('CustomField1', '')
     if rtn_code == '1':
         return redirect(f'/?paid=1&order={order_id}')
     return redirect(f'/?paid=0&order={order_id}')
