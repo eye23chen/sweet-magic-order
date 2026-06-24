@@ -113,7 +113,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address, order_
 ECPAY_MERCHANT_ID = os.environ.get('ECPAY_MERCHANT_ID', '2000132')
 ECPAY_HASH_KEY    = os.environ.get('ECPAY_HASH_KEY', '5294y06JbISpM5x9')
 ECPAY_HASH_IV     = os.environ.get('ECPAY_HASH_IV', 'v77hoKGq4kWxNNIS')
-ECPAY_API_URL     = 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
+ECPAY_API_URL     = os.environ.get('ECPAY_API_URL', 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5')
 BASE_URL          = os.environ.get('BASE_URL', 'https://web-production-baae6.up.railway.app')
 
 def ecpay_check_mac(params):
