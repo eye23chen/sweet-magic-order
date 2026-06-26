@@ -40,9 +40,13 @@ def init_db():
             quantity INTEGER NOT NULL,
             total INTEGER NOT NULL,
             payment TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT '待處理'
+            status TEXT NOT NULL DEFAULT '待處理',
+            note TEXT DEFAULT '',
+            tracking TEXT DEFAULT ''
         )
     ''')
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS note TEXT DEFAULT ''")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking TEXT DEFAULT ''")
     conn.commit()
     cur.close()
     conn.close()
@@ -180,6 +184,51 @@ def api_orders():
     cur.close()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
+@app.route('/api/orders/<int:order_id>/status', methods=['POST'])
+def api_update_status(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    data = request.get_json()
+    new_status = data.get('status', '').strip()
+    allowed = ['已付款', '已出貨', '已完成', '已取消']
+    if new_status not in allowed:
+        return jsonify({'error': '無效狀態'}), 400
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE orders SET status=%s WHERE id=%s", (new_status, order_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/orders/<int:order_id>/note', methods=['POST'])
+def api_update_note(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    data = request.get_json()
+    note = data.get('note', '').strip()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE orders SET note=%s WHERE id=%s", (note, order_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/orders/<int:order_id>/tracking', methods=['POST'])
+def api_update_tracking(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    data = request.get_json()
+    tracking = data.get('tracking', '').strip()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE orders SET tracking=%s WHERE id=%s", (tracking, order_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
 
 @app.route('/')
 def index():
