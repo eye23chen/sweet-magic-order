@@ -47,6 +47,7 @@ def init_db():
     ''')
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS note TEXT DEFAULT ''")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking TEXT DEFAULT ''")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TEXT DEFAULT NULL")
     conn.commit()
     cur.close()
     conn.close()
@@ -177,13 +178,68 @@ def send_line_notify(name, phone, quantity, total, payment, address, order_id=No
 def api_orders():
     if request.headers.get('X-API-Key') != API_KEY:
         return jsonify({'error': 'unauthorized'}), 401
+    include_deleted = request.args.get('deleted', '0') == '1'
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute('SELECT * FROM orders ORDER BY id DESC')
+    if include_deleted:
+        cur.execute('SELECT * FROM orders WHERE deleted_at IS NOT NULL ORDER BY id DESC')
+    else:
+        cur.execute('SELECT * FROM orders WHERE deleted_at IS NULL ORDER BY id DESC')
     rows = cur.fetchall()
     cur.close()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/orders/<int:order_id>/delete', methods=['POST'])
+def api_delete_order(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    conn = get_db()
+    cur = conn.cursor()
+    from datetime import datetime as dt
+    cur.execute("UPDATE orders SET deleted_at=%s WHERE id=%s", (dt.now().strftime('%Y-%m-%d %H:%M:%S'), order_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/orders/<int:order_id>/restore', methods=['POST'])
+def api_restore_order(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE orders SET deleted_at=NULL WHERE id=%s", (order_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+
+@app.route('/api/orders/<int:order_id>/edit', methods=['POST'])
+def api_edit_order(order_id):
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    data = request.get_json()
+    fields = []
+    values = []
+    for key in ['name', 'phone', 'email', 'address', 'quantity', 'total', 'payment']:
+        if key in data:
+            fields.append(f"{key}=%s")
+            values.append(data[key])
+    if not fields:
+        return jsonify({'error': '沒有要更新的欄位'}), 400
+    values.append(order_id)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"UPDATE orders SET {', '.join(fields)} WHERE id=%s", values)
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
 
 @app.route('/api/orders/<int:order_id>/status', methods=['POST'])
 def api_update_status(order_id):
