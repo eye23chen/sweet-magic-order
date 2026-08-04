@@ -75,6 +75,9 @@
     transition:transform .2s; display:block;
   }
   .gallery-grid img:hover { transform:scale(1.02); }
+  .gallery-grid img:last-child:nth-child(odd) {
+    grid-column:1 / -1; max-width:calc(50% - 10px); margin:0 auto;
+  }
 
   /* 使用方式 */
   .how-to { background:#fff8f0; }
@@ -199,6 +202,7 @@
     .step-arrow { display:none; }
     .order-form { padding:24px; }
     .gallery-grid { grid-template-columns:1fr; }
+    .gallery-grid img:last-child:nth-child(odd) { max-width:100%; }
     .payment-select { flex-direction:column; }
   }
 </style>
@@ -249,10 +253,11 @@
   <div class="container">
     <h2 class="section-title">各種族群都適合</h2>
     <div class="gallery-grid">
-      <img src="/static/images/1.jpg" alt="怕酸？水果瞬間變驚喜">
+      <img src="/static/images/gallery-starfruit.png" alt="告別酸澀，迎接甘甜">
       <img src="/static/images/3.jpg" alt="想吃甜又怕胖">
-      <img src="/static/images/5.jpg" alt="小孩挑食厭食">
-      <img src="/static/images/2.jpg" alt="化療病後味覺苦澀">
+      <img src="/static/images/gallery-strawberry.png" alt="每一口水果，都是頂級甜度">
+      <img src="/static/images/gallery-elderly-couple.png" alt="讓味蕾重生，找回食物真滋味">
+      <img src="/static/images/gallery-office-man.jpg" alt="低負擔的甜蜜，由你掌控">
     </div>
   </div>
 </section>
