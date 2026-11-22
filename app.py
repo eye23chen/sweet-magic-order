@@ -21,6 +21,31 @@ FROM_EMAIL = 'yinding90141369@gmail.com'
 FROM_NAME = '甘甜魔法 Sweet Magic'
 
 
+# ── 數位人折扣碼（2026-11-22 Eric：4 個數位人各一組碼，看是哪個數位人帶來的量；底價 500）──
+UNIT_PRICE = 700
+FLOOR_PRICE = 500                                   # 每盒最低賣價，折扣不能低於這個
+PROMO_DISCOUNT_PER_BOX = int(os.environ.get('PROMO_DISCOUNT_PER_BOX', '100'))
+PROMO_CODES = {                                     # 碼（不分大小寫） → (角色 id, 顯示名稱)
+    'MANNING': ('su_manning', '蘇曼寧'),
+    'YUQING':  ('xia_yuqing', '夏語晴'),
+    'MUEN':    ('ye_muen',    '葉沐恩'),
+    'YANZE':   ('gu_yanze',   '顧言澤'),
+}
+SOURCE_NAMES = {v[0]: v[1] for v in PROMO_CODES.values()}
+
+
+def lookup_promo(code):
+    code = (code or '').strip().upper()
+    return (code, PROMO_CODES[code]) if code in PROMO_CODES else (code, None)
+
+
+def calc_price(quantity, promo_ok):
+    unit = max(UNIT_PRICE - PROMO_DISCOUNT_PER_BOX, FLOOR_PRICE) if promo_ok else UNIT_PRICE
+    shipping = 0 if quantity >= 2 else 80
+    discount = (UNIT_PRICE - unit) * quantity
+    return unit, shipping, discount, unit * quantity + shipping
+
+
 def get_db():
     conn = psycopg2.connect(DATABASE_URL)
     return conn
@@ -48,15 +73,19 @@ def init_db():
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS note TEXT DEFAULT ''")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking TEXT DEFAULT ''")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TEXT DEFAULT NULL")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS source_ip TEXT DEFAULT ''")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER DEFAULT 0")
     conn.commit()
     cur.close()
     conn.close()
 
 
-def send_confirm_email(to_email, name, quantity, total, payment, address, order_id=None, status='待處理'):
+def send_confirm_email(to_email, name, quantity, total, payment, address, order_id=None, status='待處理', discount=0, promo_code=''):
     if not BREVO_API_KEY:
         return
     try:
+        discount_html = f'<tr><td style="padding:6px 0;color:#888;">折扣碼</td><td style="padding:6px 0;">{promo_code}（已折 NT${discount:,}）</td></tr>' if discount else ''
         bank_html = "<div style='background:#e8f5e9;border-radius:12px;padding:20px;margin-bottom:24px;'><h3 style='color:#2e7d32;margin:0 0 12px;'>🏦 匯款資訊</h3><p style='color:#555;font-size:.9rem;line-height:2;margin:0;'>銀行：新光商業銀行（代碼 103）北嘉義分行<br>帳號：0666-10-100559-5<br>戶名：飲鼎國際有限公司<br><strong style='color:#2e7d32;'>匯款後請加入 LINE @607eldnj 並傳送匯款截圖</strong></p></div>" if payment == "銀行匯款" else ""
         html = f'''
         <div style="font-family:'Noto Sans TC',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);">
@@ -74,6 +103,7 @@ def send_confirm_email(to_email, name, quantity, total, payment, address, order_
                 <tr><td style="padding:6px 0;color:#888;">訂單編號</td><td style="padding:6px 0;font-weight:700;color:#333;">#{order_id}</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">商品</td><td style="padding:6px 0;font-weight:700;color:#333;">甘甜魔法（1盒20小包裝入）</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">數量</td><td style="padding:6px 0;">{quantity} 盒</td></tr>
+                {discount_html}
                 <tr><td style="padding:6px 0;color:#888;">金額</td><td style="padding:6px 0;font-size:1.2rem;font-weight:900;color:#ff8c00;">NT${total:,}（含運）</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">收件地址</td><td style="padding:6px 0;">{address}</td></tr>
                 <tr><td style="padding:6px 0;color:#888;">付款方式</td><td style="padding:6px 0;">{payment}</td></tr>
@@ -128,7 +158,7 @@ def ecpay_check_mac(params):
     raw = urllib.parse.quote_plus(raw).lower()
     return hashlib.sha256(raw.encode()).hexdigest().upper()
 
-def build_ecpay_form(order_id, total, name):
+def build_ecpay_form(order_id, total, name, quantity=1):
     trade_no = f'SM{order_id:08d}{int(time.time()) % 100000:05d}'
     trade_date = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
     params = {
@@ -138,7 +168,7 @@ def build_ecpay_form(order_id, total, name):
         'PaymentType':       'aio',
         'TotalAmount':       str(total),
         'TradeDesc':         '甘甜魔法訂單',
-        'ItemName':          f'甘甜魔法x{total//700 if total % 700 == 0 else 1}',
+        'ItemName':          f'甘甜魔法x{quantity}',
         'ReturnURL':         f'{BASE_URL}/ecpay/callback',
         'OrderResultURL':    f'{BASE_URL}/ecpay/result',
         'CustomField1':      str(order_id),
@@ -157,13 +187,14 @@ API_KEY = os.environ.get('API_KEY', 'yinding-sweet-magic-2026')
 LINE_TOKEN = os.environ.get('LINE_TOKEN', '')
 LINE_USER_ID = os.environ.get('LINE_USER_ID', '')
 
-def send_line_notify(name, phone, quantity, total, payment, address, order_id=None, status=None):
+def send_line_notify(name, phone, quantity, total, payment, address, order_id=None, status=None, source=''):
     if not LINE_TOKEN or not LINE_USER_ID:
         return
     try:
         order_str = f"訂單編號：#{order_id}\n" if order_id else ""
         status_str = f"付款狀態：{status}\n" if status else ""
-        msg = f"🛒 新訂單通知！\n{order_str}姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n{status_str}地址：{address}"
+        source_str = f"來源：{source}\n" if source else ""
+        msg = f"🛒 新訂單通知！\n{order_str}{source_str}姓名：{name}\n電話：{phone}\n數量：{quantity} 盒\n金額：NT${total:,}\n付款：{payment}\n{status_str}地址：{address}"
         data = json.dumps({'to': LINE_USER_ID, 'messages': [{'type': 'text', 'text': msg}]}).encode()
         req = urllib.request.Request(
             'https://api.line.me/v2/bot/message/push',
@@ -300,8 +331,16 @@ def order():
     address  = data.get('address', '').strip()
     quantity = int(data.get('quantity', 1))
     payment  = data.get('payment', '線上金流（綠界）').strip()
-    shipping = 0 if quantity >= 2 else 80
-    total    = quantity * 700 + shipping
+    if quantity < 1:
+        return jsonify({'success': False, 'message': '數量錯誤'})
+    promo_code, promo = lookup_promo(data.get('promo_code'))
+    if promo_code and not promo:
+        return jsonify({'success': False, 'message': '折扣碼無效，請確認或清空後再送出'})
+    _, ref = lookup_promo(data.get('ref'))          # 從數位人專屬連結 ?code= 進來的
+    src = promo or ref
+    source_ip = src[0] if src else ''
+    source_name = src[1] if src else ''
+    _, shipping, discount, total = calc_price(quantity, bool(promo))
 
     if not all([name, phone, email, address]):
         return jsonify({'success': False, 'message': '請填寫所有必填欄位'})
@@ -309,8 +348,9 @@ def order():
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
-        'INSERT INTO orders (created_at,name,phone,email,address,quantity,total,payment) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id',
-        (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, phone, email, address, quantity, total, payment)
+        'INSERT INTO orders (created_at,name,phone,email,address,quantity,total,payment,promo_code,source_ip,discount) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id',
+        (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, phone, email, address, quantity, total, payment,
+         promo_code if promo else '', source_ip, discount)
     )
     order_id = cur.fetchone()[0]
     conn.commit()
@@ -320,10 +360,39 @@ def order():
     if payment == '線上金流（綠界）':
         return jsonify({'success': True, 'order_id': order_id, 'ecpay': True})
 
-    threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id), daemon=True).start()
-    threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address, order_id), daemon=True).start()
+    threading.Thread(target=send_confirm_email, args=(email, name, quantity, total, payment, address, order_id, '待處理', discount, promo_code if promo else ''), daemon=True).start()
+    threading.Thread(target=send_line_notify, args=(name, phone, quantity, total, payment, address, order_id, None, source_name), daemon=True).start()
 
     return jsonify({'success': True, 'order_id': order_id})
+
+
+@app.route('/api/promo/check')
+def api_promo_check():
+    code, promo = lookup_promo(request.args.get('code'))
+    if not promo:
+        return jsonify({'valid': False})
+    unit, _, _, _ = calc_price(1, True)
+    return jsonify({'valid': True, 'code': code, 'name': promo[1], 'unit_price': unit})
+
+
+@app.route('/api/promo/stats')
+def api_promo_stats():
+    """各數位人帶來的訂單數／盒數／金額（不含已刪除、已取消）。"""
+    if request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'unauthorized'}), 401
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""SELECT COALESCE(NULLIF(source_ip,''),'') AS source_ip, COUNT(*) AS orders,
+                          SUM(quantity) AS boxes, SUM(total) AS amount, SUM(discount) AS discount,
+                          SUM(CASE WHEN promo_code<>'' THEN 1 ELSE 0 END) AS used_code
+                   FROM orders WHERE deleted_at IS NULL AND status<>'已取消'
+                   GROUP BY 1 ORDER BY 2 DESC""")
+    rows = [dict(r) for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    for r in rows:
+        r['name'] = SOURCE_NAMES.get(r['source_ip'], '沒有來源')
+    return jsonify(rows)
 
 
 @app.route('/ecpay/checkout/<int:order_id>')
@@ -336,7 +405,7 @@ def ecpay_checkout(order_id):
     conn.close()
     if not o:
         return '訂單不存在', 404
-    return build_ecpay_form(o['id'], o['total'], o['name'])
+    return build_ecpay_form(o['id'], o['total'], o['name'], o['quantity'])
 
 
 @app.route('/ecpay/callback', methods=['POST'])
@@ -353,8 +422,9 @@ def ecpay_callback():
         cur.close()
         conn.close()
         if o:
-            threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '已付款'), daemon=True).start()
-            threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '✅ 已付款'), daemon=True).start()
+            src_name = SOURCE_NAMES.get(o.get('source_ip') or '', '')
+            threading.Thread(target=send_confirm_email, args=(o['email'], o['name'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '已付款', o.get('discount') or 0, o.get('promo_code') or ''), daemon=True).start()
+            threading.Thread(target=send_line_notify, args=(o['name'], o['phone'], o['quantity'], o['total'], o['payment'], o['address'], o['id'], '✅ 已付款', src_name), daemon=True).start()
     return '1|OK'
 
 

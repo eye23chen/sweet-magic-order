@@ -363,13 +363,19 @@
         </div>
         <div class="form-group">
           <label>訂購數量 *</label>
-          <select name="quantity" onchange="updateTotal(this)">
+          <select name="quantity" onchange="updateTotal()">
             <option value="1">1 盒 — NT$700（＋運費 NT$80）</option>
             <option value="2">2 盒 — NT$1,400（免運）</option>
             <option value="3">3 盒 — NT$2,100（免運）</option>
             <option value="4">4 盒 — NT$2,800（免運）</option>
             <option value="5">5 盒 — NT$3,500（免運）</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>折扣碼（選填）</label>
+          <input type="text" name="promo_code" id="promoCode" placeholder="有折扣碼請輸入" autocomplete="off"
+                 oninput="checkPromo()" style="text-transform:uppercase;">
+          <div id="promoMsg" style="font-size:.85rem;margin-top:6px;min-height:1.2em;"></div>
         </div>
         <div class="form-group">
           <label>付款方式 *</label>
@@ -427,12 +433,47 @@
 </footer>
 
 <script>
-function updateTotal(sel) {
+// 數位人折扣碼：?code=XXX 進來自動帶入，訂單記錄來源
+let unitPrice = 700;
+let promoValid = false;
+const refCode = (new URLSearchParams(location.search).get('code') || '').trim().toUpperCase();
+
+function updateTotal() {
+  const sel = document.querySelector('select[name=quantity]');
   const qty = parseInt(sel.value);
   const shipping = qty >= 2 ? 0 : 80;
-  const total = qty * 700 + shipping;
-  const note = shipping > 0 ? '（含運費 NT$80）' : '（免運）';
+  const total = qty * unitPrice + shipping;
+  let note = shipping > 0 ? '（含運費 NT$80）' : '（免運）';
+  if (promoValid) note += '｜已折 NT$' + ((700 - unitPrice) * qty).toLocaleString();
   document.getElementById('totalPrice').textContent = 'NT$' + total.toLocaleString() + ' ' + note;
+  Array.from(sel.options).forEach(o => {
+    const n = parseInt(o.value);
+    o.textContent = n + ' 盒 — NT$' + (n * unitPrice).toLocaleString() + (n >= 2 ? '（免運）' : '（＋運費 NT$80）');
+  });
+}
+
+let promoTimer = null;
+function checkPromo() {
+  clearTimeout(promoTimer);
+  promoTimer = setTimeout(() => {
+    const code = document.getElementById('promoCode').value.trim().toUpperCase();
+    const msg = document.getElementById('promoMsg');
+    if (!code) { promoValid = false; unitPrice = 700; msg.textContent = ''; updateTotal(); return; }
+    fetch('/api/promo/check?code=' + encodeURIComponent(code))
+      .then(r => r.json())
+      .then(res => {
+        promoValid = !!res.valid;
+        unitPrice = res.valid ? res.unit_price : 700;
+        msg.style.color = res.valid ? '#2e7d32' : '#d32f2f';
+        msg.textContent = res.valid ? '✅ 折扣碼已套用，每盒 NT$' + res.unit_price : '❌ 折扣碼無效';
+        updateTotal();
+      });
+  }, 300);
+}
+
+if (refCode) {
+  document.getElementById('promoCode').value = refCode;
+  checkPromo();
 }
 
 function selectPayment(el, type) {
@@ -450,7 +491,9 @@ function submitOrder(e) {
     email: form.email.value,
     address: form.address.value,
     quantity: form.quantity.value,
-    payment: form.payment.value
+    payment: form.payment.value,
+    promo_code: document.getElementById('promoCode').value.trim(),
+    ref: refCode
   };
   const btn = form.querySelector('.btn-submit');
   btn.textContent = '送出中...';
